@@ -1,0 +1,33 @@
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\bin\Debug\vis.exe
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\bin\Debug\vis.pdb
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\obj\x86\Debug\ResolveAssemblyReference.cache
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\obj\x86\Debug\vis.foConfig.resources
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\obj\x86\Debug\vis.foLog.resources
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\obj\x86\Debug\vis.foMain.resources
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\obj\x86\Debug\vis.Properties.Resources.resources
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\obj\x86\Debug\GenerateResource.read.1.tlog
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\obj\x86\Debug\GenerateResource.write.1.tlog
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\obj\x86\Debug\vis.exe
+D:\EDUC\bak_bakalarka\visualizace\c\vis\vis\obj\x86\Debug\vis.pdb
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\obj\x86\Debug\vis.exe
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\obj\x86\Debug\vis.pdb
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\obj\x86\Debug\ResolveAssemblyReference.cache
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\obj\x86\Debug\vis.foConfig.resources
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\obj\x86\Debug\vis.foLog.resources
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\obj\x86\Debug\vis.Properties.Resources.resources
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\obj\x86\Debug\GenerateResource.read.1.tlog
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\obj\x86\Debug\GenerateResource.write.1.tlog
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\bin\Debug\vis.exe
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\bin\Debug\vis.pdb
+D:\EDUC\bak_bakalarka\vizualizace\c\vis\vis\obj\x86\Debug\vis.foMain.resources
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\obj\x86\Debug\vis.exe
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\obj\x86\Debug\vis.pdb
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\bin\Debug\vis.exe
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\bin\Debug\vis.pdb
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\obj\x86\Debug\ResolveAssemblyReference.cache
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\obj\x86\Debug\vis.foLog.resources
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\obj\x86\Debug\vis.foMain.resources
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\obj\x86\Debug\vis.Properties.Resources.resources
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\obj\x86\Debug\GenerateResource.read.1.tlog
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\obj\x86\Debug\GenerateResource.write.1.tlog
+D:\EDUC\bak_bakalarka\CD\programy C#\ODOMAT\vis\obj\x86\Debug\vis.foCmds.resources

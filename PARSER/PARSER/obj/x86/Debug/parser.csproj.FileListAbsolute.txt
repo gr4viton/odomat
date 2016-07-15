@@ -1,0 +1,9 @@
+D:\EDUC\bak_bakalarka\vizualizace\parser ODOMSG\parser\parser\obj\x86\Debug\ResolveAssemblyReference.cache
+D:\EDUC\bak_bakalarka\vizualizace\parser ODOMSG\parser\parser\obj\x86\Debug\parser.Form1.resources
+D:\EDUC\bak_bakalarka\vizualizace\parser ODOMSG\parser\parser\obj\x86\Debug\parser.Properties.Resources.resources
+D:\EDUC\bak_bakalarka\vizualizace\parser ODOMSG\parser\parser\obj\x86\Debug\GenerateResource.read.1.tlog
+D:\EDUC\bak_bakalarka\vizualizace\parser ODOMSG\parser\parser\obj\x86\Debug\GenerateResource.write.1.tlog
+D:\EDUC\bak_bakalarka\vizualizace\parser ODOMSG\parser\parser\bin\Debug\parser.exe
+D:\EDUC\bak_bakalarka\vizualizace\parser ODOMSG\parser\parser\bin\Debug\parser.pdb
+D:\EDUC\bak_bakalarka\vizualizace\parser ODOMSG\parser\parser\obj\x86\Debug\parser.exe
+D:\EDUC\bak_bakalarka\vizualizace\parser ODOMSG\parser\parser\obj\x86\Debug\parser.pdb

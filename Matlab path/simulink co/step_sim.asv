@@ -1,0 +1,31 @@
+function [x,y,th] = step_sim ( rob, t_step, type)
+% calculates one step of the simulation with the time step t_step
+% type
+'vel'
+'pos'
+vell = rob.vellr(1);
+velr = rob.vellr(2);
+b = rob.base;
+th0 = rob.th;
+x0 = rob.pos(1);
+y0 = rob.pos(2);
+
+relvel = (velr-vell)/b;
+if relvel ~= 0
+    th = relvel * t_step + th0;
+    velradius = (velr+vell)/2/relvel;
+    if velradius < 999999999
+        x = x0 + velradius * ( sin(relvel * t_step + th0) - sin(th0) );
+        y = y0 - velradius * ( cos(relvel * t_step + th0) - cos(th0) );
+    else
+        relvel = 0;
+    end
+end
+if relvel == 0
+    average_path = (vell+velr)/2;
+    th = (vell-velr)/b + th0;
+    x = x0 + average_path * cos(th);
+    y = y0 + average_path * sin(th);
+end
+
+% rob

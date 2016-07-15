@@ -1,0 +1,770 @@
+% semestralni prace
+clear;close all;clc;
+%%
+addpath(genpath('D:\EDUC\b5\z_bzvs\'));
+addpath(genpath('E:\b5\z_bzvs\'));
+addpath(genpath('F:\b5\z_bzvs\'));
+
+% simechanic
+
+% plot([xod,xdo],[omega,omega],'color',cc(i,:),'LineWidth', 2);
+% plot([0 1 5], [0 0 4])
+
+scrsz = get(0,'ScreenSize');
+% % [left, bottom, width, height]
+main = figure('Name','main',...
+    'Position',[1 1 scrsz(3) scrsz(4)]);
+%     'Position',[1 scrsz(4)/3 scrsz(3)/2 scrsz(4)/1.5]);
+curfig = set_fig(main);
+
+
+hold on;
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%init robot
+% YES [m] [sec]
+
+
+% NO [m] [sec/100]
+% in centions of seconds
+rob0 = struct(...
+    'utc', 0,...   
+    'utc_startup', 0,...
+    'utc_end', 0,...
+    'utc_offset', 0.60,...
+    'utc_offset_odom', 0.50,...
+    'utc_yawtime', 143228,...
+    'plotAsec', 20,... 
+    'pR', 0,... %path
+    'pL', 0,...
+    'tR', 0,... %ticks
+    'tL', 0,...
+    'TR', 8581,... %ticks per wheel revolution [ticks]
+    'TL', 8582,...    
+    'eR', 3,... %error per wheel revolution [ticks]
+    'eL', 4,...    
+    'rR', 0.10,... %radius of wheels [m]
+    'rL', 0.10,...
+    'aR', 0,... % tR*aR = pR --> aR = 2*pi*rR/TR
+    'aL', 0,...    
+    'cR', 1,... % tR*aR*cR = pR --> aR = (2*pi*rR/TR )* cR
+    'cL', 1,...    
+    'lastx', 0,...
+    'lasty', 0,...
+    'x', 0,...
+    'y', 0,...
+    'th', 0,...
+    'xNew', 0,...
+    'yNew', 0,...
+    'thNew', 0,...
+    'b', 0.675,... % podstava [m]
+    'Q', eye(3),...
+    'P', eye(3),...
+    's', [0 0 0]',... % state vector
+    'meas', [0 0],... % matrix of measured [tL tR] 
+    'is_gps', 0,... % whether the robot is normal and it should calculate odometry, or only show transformed gps coordinates
+    'inVar', 0,...    
+    'digits_rob', 32,...
+    'iter2', 0,...
+    'calc_eqn', 0,...    % rovnice 0=sin*cos.., 1=sin+cos..
+    'calc_prob', 1,...    % 1=calculating 0= nope
+    'color1', [0.1 0.3 0.5],...
+    'color2', [0 0 0],... 
+    'robline', '-',...
+    'title', 'robot',...
+    'plot_period', 14,...
+    'robot_visible', 1,...
+    'variance_visible', 1,...
+    'pix', 0.20,... %pixels of covariance matrix
+    'robot_radius', 0.02); % radius of its drawen circle
+
+
+% no- in centions of seconds
+
+%%
+% covariance of system noise
+% sys pos noise was taken to be
+% [m]
+sigmax = 0.034;
+sigmay = 0.034;
+sigmath = deg2rad(0.5);
+% sigmax = 0.0728;
+% sigmay = 0.15;
+% sigmath = 0;
+Q11 = sigmax^2;
+Q22 = sigmay^2;
+Q33 = sigmath^2;
+Q = diag( [Q11,Q22,Q33] );
+% Q
+
+% error covariance 
+P = Q;
+
+% input noise covariance
+inVar = blkdiag(1e-4,1e-4); 
+
+rob0.P = P;
+rob0.Q = 0;
+rob0.inVar = inVar;
+
+rob0.aR = 1 / rob0.TR *2*pi * rob0.rR;
+rob0.aL = 1 / rob0.TL *2*pi * rob0.rL;
+
+% [rob0.eL; rob0.eR] = [1; 1] .* 100
+% rob0.eL = 25;
+% rob0.eR =rob0.eL;
+
+rob0.calc_eqn = 1;
+rob0.calc_prob = 1;
+
+this_sec_plotted = 0;
+
+
+
+plot_text = 0
+plot_text = 2
+cislo_mereni = 1
+switch (cislo_mereni)
+    case(1)
+        rob0.utc_startup = 143011;
+%         rob0.utc_end = 143100;
+        rob0.utc_end = 143059;
+        
+        rob0.utc_yawtime = rob0.utc_startup + 0.5;
+        rob0.utc_offset = -0.6; % dobry bez prumìrování
+%         rob0.utc_offset = -0.5; 
+%         rob0.utc_offset = 0;
+%         rob0.utc_offset_odom = 0.5;
+        rob0.utc_offset_odom = 0;
+    case(2)
+        rob0.utc_startup = 143225.5;
+        rob0.utc_end = 143413;
+
+        rob0.utc_yawtime = rob0.utc_startup + 0.5;
+        rob0.utc_offset = -0.77;
+        rob0.utc_offset_odom = 0;
+    case(7)
+%         rob0.utc_offset = 145847; %lost utc
+    case(8)
+        rob0.utc_startup = 145847;
+        rob0.utc_offset = 145847; %lost utc
+        break;
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+[i_rob, rob] = create_robots(rob0,cislo_mereni, rob0.utc_offset_odom);
+
+% rob(1:i_rob).utc = rob(1).utc + rob0.utc_offset_odom;
+% utc = rob(1).utc - rob0.utc_startup
+%%
+t_step = 1;
+last_step = 0; 
+for i=1:i_rob
+    if last_step < size(rob(i).meas,1)  
+        last_step = size(rob(i).meas,1);
+    end
+end
+t_end = last_step -1;
+steps = t_end/t_step;
+% t_fpt = steps / 25;
+% t_fpt = 15;
+
+
+% color rainbow
+chsv = hsv( floor(steps)+2);
+chsv2 = hsv( 1000 );
+
+
+figure(1);
+%  scrsz = get(0,'ScreenSize');
+% aa = figure('Position',[1 scrsz(4)/2 scrsz(3)/2 scrsz(4)/2]);
+display short;
+display long;
+PP = zeros(i_rob,steps,3,3);
+last_digits = digits;
+% digits(last_digits);
+
+%% main loop
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% steps
+
+for j = 1:i_rob %3
+
+plotted_steps = 1;
+for i = 0: steps
+    
+digits = rob(j).digits_rob;
+r = rob(j);
+%       actualize last point for visualisation
+r.lastx = r.x; r.lasty = r.y;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% input from encoder readings
+% on the known trajectory - i.e circle
+ % [cm] 
+if i+1 > size(r.meas,1) 
+    break;
+end
+ r.tL = double(r.meas(i+1,1));
+ r.tR = double(r.meas(i+1,2));
+ 
+% if j >=3
+%     digits(7);
+% end
+ r.pR = r.tR * r.aR;
+ r.pL = r.tL * r.aL;
+           
+pC = (r.pR + r.pL) / 2;
+dth = (r.pR - r.pL) / r.b;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% not straight
+if dth ~= 0
+%% auxilary
+C = pC/dth;
+arg = r.th + dth/2;
+arg2 = r.th + dth;
+
+if r.calc_prob == 1
+%% system matrix A
+A = eye(3,3);
+
+if r.calc_eqn==0
+% ******************************
+p = pC; 
+D = dth;
+t = r.th;
+%% wolfram
+% dFx/d(th) = dFx/d(t) 
+% d/dt (2* p / D * sin(D/2) * cos(t + D/2))
+A(1,3) = -(2*p*sin(D/2)*sin(D/2+t))/D;
+% alternate form ==> almost the same
+% A(1,3) = (p*cos(D+t)-p*cos(t))/D;
+
+% dFy/d(th) = dFy/d(t) 
+% d/dt (2* p / D * sin(D/2) * sin(t + D/2))
+A(2,3) = (2*p*sin(D/2)*cos(D/2+t))/D;
+% alternate form ==> almost the same
+% A(2,3) = (p*(sin(D+t)-sin(t)))/D;
+else
+% ++++++++++++++++++++++++++++++
+p = pC; 
+D = dth;
+t = r.th;
+% dFx/d(th) 
+% d/dt (p / D * (sin(t + D) - sin(t))
+% A(1,3) = (p*(cos(D+t)-cos(t)))/D;
+A(1,3) = p/D*( cos(D+t)-cos(t) );
+% dFy/d(th) 
+% d/dt ( - p / D * (cos(t + D) - cos(t))
+% A(2,3) = -(p*(sin(t)-sin(D+t)))/D;
+A(2,3) = p/D*( sin(D+t)-sin(t) );
+end
+%% input matrix B
+
+% if r.calc_eqn==0 
+% ******************************
+% else -> vychazi to stejnì -> asi jt na sebe pøevoditelny stejnì jako *a+
+% ++++++++++++++++++++++++++++++
+
+L = r.tL;
+R = r.tR;
+b = r.b ;
+theta = r.th;
+a = r.aR; z = r.aL;
+
+%     th = r.th;
+    cos_th = cos(theta);
+    sin_th = sin(theta);
+%     [arg2 dth+theta]
+%     arg2 = dth + theta;
+    cos_arg2 = cos(arg2);
+    sin_arg2 = sin(arg2);
+    
+    pR = r.pR;
+    pL = r.pL;
+%     
+% % locred
+% k1 = r.aR* (R+L)/(R-L) / b;
+% k2 = theta + r.aR*(R-L)/b;
+% k3 = b*L / (2*(r.aR*(R-L)/b)^2);
+% 
+% % dFx/dL
+% B(1,1) = k1*cos(k2)-k3*(sin(k2)-sin(theta));
+% % dFx/dR
+% B(1,2) = -k1*cos(k2)+k3*(sin(k2)-sin(theta));
+% 
+% % dFy/dL
+% B(2,1) = k1*sin(k2)-k3*(-cos(k2)+cos(theta));
+% % dFy/dR
+% B(2,2) = -k1*sin(k2)+k3*(-cos(k2)+cos(theta));
+
+% spocteno
+% dFx/dL
+% B(1,1) = z/b*( -C*cos(th+dth) + pR/dth/dth*(sin(th+dth) - sin(th)) );
+B(1,1) = z/b*( -C*cos_arg2 + pR/dth/dth*(sin_arg2 - sin_th) );
+% dFx/dR
+% B(1,2) = a/b*( C*cos(th+dth) + pL/dth/dth*(sin(th) - sin(th+dth)) );
+B(1,2) = a/b*( C*cos_arg2 + pL/dth/dth*(sin_th - sin_arg2) );
+
+% dFy/dL
+% B(2,1) = z/b*(-sin(th+dth)*C + pR/dth/dth*(-cos(th+dth) + cos(th)));
+B(2,1) = z/b*(-sin_arg2*C + pR/dth/dth*(-cos_arg2 + cos_th));
+% dFy/dR
+% B(2,2) = z/b*(sin(th+dth)*C + pL/dth/dth*(+cos(th+dth) - cos(th)));
+B(2,2) = z/b*(sin_arg2*C + pL/dth/dth*(+cos_arg2 - cos_th));
+
+% dFth/dL
+B(3,1) = -z/b;
+% dFth/dR
+B(3,2) = a/b;
+
+%%
+% Q = r.Q;
+P = r.P ; %(i+1,:,:) ;
+% P
+
+EL = r.eL / r.TL;
+ER = r.eR / r.TR;
+vL =  r.tL * EL; 
+vR =  r.tR * ER;
+% eL =  r.eL;
+% eR =  r.eR;
+    
+inVar = blkdiag( vL^2, vR^2 );
+% inVar = blkdiag( eL, eR );
+
+if r.calc_eqn<3
+   P = A*P*A' + B*inVar*B' ;
+
+else
+    P11 = P(1,1);    P12 = P(1,2);    P13 = P(1,3);    P22 = P(2,2);    P23 = P(2,3);    P33 = P(3,3);    
+    A13 = A(1,3);    A23 = A(2,3);
+    B11 = B(1,1);    B12 = B(1,2);    B21 = B(2,1);    B22 = B(2,2);    B31 = B(3,1);    B32 = B(3,2);        
+    Q11 = Q(1,1);    Q22 = Q(2,2);    Q33 = Q(3,3);
+    
+%     must be one-step calculation
+            VL2 =  vL^2; 
+            VR2 =  vR^2;
+			% P = ( A*P*A' ) + ( B*inVAR*B' ) + ( Q )
+			%APA:matrix([A13*(A13*P33+P31)+A13*P13+P11,A13*(A23*P33+P32)+A23*P13+P12,A13*P33+P13],[A23*(A13*P33+P31)+A13*P23+P21,A23*(A23*P33+P32)+A23*P23+P22,A23*P33+P23],[A13*P33+P31,A23*P33+P32,P33])
+			%BiB:matrix([B12^2*VR2+B11^2*VL2,B12*B22*VR2+B11*B21*VL2,B12*B32*VR2+B11*B31*VL2],[B12*B22*VR2+B11*B21*VL2,B22^2*VR2+B21^2*VL2,B22*B32*VR2+B21*B31*VL2],[B12*B32*VR2+B11*B31*VL2,B22*B32*VR2+B21*B31*VL2,B32^2*VR2+B31^2*VL2])
+            %Q: matrix([Q11,0,0],[0,Q22,0],[0,0,Q33])
+			% P is symetric
+    P11 = ( A13*(A13*P33+P13)+A13*P13+P11 ) + ( (B12*B12)*VR2+(B11*B11)*VL2 ) + ( Q11 );
+    P12 = ( A13*(A23*P33+P23)+A23*P13+P12 ) + ( B12*B22*VR2+B11*B21*VL2 );
+    P13 = ( A13*P33+P13 )                   + ( B12*B32*VR2+B11*B31*VL2 );
+    P22 = ( A23*(A23*P33+P23)+A23*P23+P22 ) + ( (B22*B22)*VR2+(B21*B21)*VL2) + ( Q22 );
+    P23 = ( A23*P33+P23 )                   + ( B22*B32*VR2+B21*B31*VL2 );
+    P33 = ( P33 )                           + ( (B32*B32)*VR2+(B31*B31)*VL2 ) + ( Q33 );
+ 
+P = [ P11, P12, P13; P12, P22, P23; P13, P23, P33];
+end
+
+if mod(i,r.plot_period) == 0
+%     if j == 2
+% pix = r.pix;
+% ima = image([r.x r.x+pix],[r.y r.y-pix], x*1e+8,'CDataMapping','scaled');
+%     end
+end
+
+PP(i+1,j,1:3,1:3) = P;
+% 
+% APA = A*P*A'
+% BiB = B*inVar*B'
+
+r.P = P;
+r.Q = Q;
+% P
+end %calc_prob
+
+ 
+
+%odometric geometry calculations
+if r.calc_eqn==0
+% ******************************
+% Fx    
+% 2* p / D * sin(D/2) * cos(t + D/2)
+% 2*(R*a+L*z)/(R*a-L*z)*b/2* sin((a*R-z*L)/b/2) * cos( th + (a*R-z*L)/b/2) 
+r.x = r.x + 2*C * sin(dth/2) * cos(arg);
+% Fy
+% 2* p / D * sin(D/2) * sin(t + D/2)
+% 2*(R*a+L*z)/(R*a-L*z)*b/2* sin((a*R-z*L)/b/2) * sin( th + (a*R-z*L)/b/2) 
+r.y=  r.y + 2*C * sin(dth/2) * sin(arg);
+% (R*a-L*z)/*b 
+r.th = r.th + dth;
+
+else
+% ++++++++++++++++++++++++++++++
+% Fx    
+% p / D * (sin(t + D) - sin(t)
+% (R*a+L*z)/(R*a-L*z)*b/2*( sin((R*a-L*z)/b + theta) - sin(theta) )
+r.x = r.x + C * ( sin(arg2) - sin(r.th) );
+% Fy
+% p / D * (cos(t + D) - cos(t)
+% (R*a+L*z)/(R*a-L*z)*b/2*( cos((R*a-L*z)/b + theta) - cos(theta) )
+r.y = r.y - C * ( cos(arg2) - cos(r.th) );
+% (R*a-L*z)/b 
+r.th = r.th + dth;    
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% straight
+else
+
+if r.calc_prob == 1
+		sin_th = sin(r.th);
+		cos_th = cos(r.th);
+
+		%% system matrix A(
+        A = eye(3);        
+		% dFx/d(th)
+        % limit(D->0) -(2*p*sin(D/2)*sin(D/2+t))/D
+		A(1,3) = - pC * sin_th;
+		% dFy/d(th)
+        % limit(D->0)  (2*p*sin(D/2)*cos(D/2+t))/D;
+		A(2,3) = + pC * cos_th ;
+
+		%% input matrix B
+L = r.tL;
+R = r.tR;
+b = r.b ;
+theta = r.th;
+a = r.aR; z = r.aL;
+		% dFx/dL
+%         d/dL (a*R+z*L )/ 2 * cos(theta)
+		B(1,1) = z/2 *cos(theta);
+		% dFx/dR
+%         d/dR (a*R+z*L )/ 2 * cos(theta)
+      	B(1,2) = a/2 *cos(theta);
+%+-
+		% dFy/dL
+%         d/dL (a*R+z*L )/ 2 * sin(theta)
+		B(2,1) = z/2 *sin(theta) ;
+		% dFy/dR
+%         d/dR (a*R+z*L )/ 2 * sin(theta)
+		B(2,2) = a/2 *sin(theta);
+
+		% dFth/dL
+		B(3,1) = 0;
+		% dFth/dR
+		B(3,2) = 0;
+ 
+Q = r.Q;
+P = r.P; 
+EL = r.eL / r.TL;
+ER = r.eR / r.TR;
+vL =  r.tL * EL; 
+vR =  r.tR * ER;
+    
+if r.calc_eqn<3
+    inVar = blkdiag( vL^2, vR^2 );    
+   P = A*P*A' + B*inVar*B' + Q;
+else
+    P11 = P(1,1);    P12 = P(1,2);    P13 = P(1,3);    P22 = P(2,2);    P23 = P(2,3);    P33 = P(3,3);    
+    A13 = A(1,3);    A23 = A(2,3);
+    B11 = B(1,1);    B12 = B(1,2);    B21 = B(2,1);    B22 = B(2,2);    B31 = B(3,1);    B32 = B(3,2);        
+    Q11 = Q(1,1);    Q22 = Q(2,2);    Q33 = Q(3,3);
+    
+%     must be one-step calculation
+            VL2 =  vL^2; 
+            VR2 =  vR^2;
+			% P = ( A*P*A' ) + ( B*inVAR*B' ) + ( Q )
+			%APA:matrix([A13*(A13*P33+P31)+A13*P13+P11,A13*(A23*P33+P32)+A23*P13+P12,A13*P33+P13],[A23*(A13*P33+P31)+A13*P23+P21,A23*(A23*P33+P32)+A23*P23+P22,A23*P33+P23],[A13*P33+P31,A23*P33+P32,P33])
+			%BiB:matrix([B12^2*VR2+B11^2*VL2,B12*B22*VR2+B11*B21*VL2,B12*B32*VR2+B11*B31*VL2],[B12*B22*VR2+B11*B21*VL2,B22^2*VR2+B21^2*VL2,B22*B32*VR2+B21*B31*VL2],[B12*B32*VR2+B11*B31*VL2,B22*B32*VR2+B21*B31*VL2,B32^2*VR2+B31^2*VL2])
+            %Q: matrix([Q11,0,0],[0,Q22,0],[0,0,Q33])
+			% P is symetric    
+    P11 = ( A13*(A13*P33+P13)+A13*P13+P11 ) + ( (B12*B12)*VR2+(B11*B11)*VL2 ) + ( Q11 );
+    P12 = ( A13*(A23*P33+P23)+A23*P13+P12 ) + ( B12*B22*VR2+B11*B21*VL2 );
+    P13 = ( A13*P33+P13 )                   + ( B12*B32*VR2+B11*B31*VL2 );
+    P22 = ( A23*(A23*P33+P23)+A23*P23+P22 ) + ( (B22*B22)*VR2+(B21*B21)*VL2) + ( Q22 );
+    P23 = ( A23*P33+P23 )                   + ( B22*B32*VR2+B21*B31*VL2 );
+    P33 = ( P33 )                           + ( (B32*B32)*VR2+(B31*B31)*VL2 ) + ( Q33 );
+            
+P = [ P11, P12, P13; P12, P22, P23; P13, P23, P33];
+end
+end
+% limits are the same for both + and * equations
+% x = x + (a*R+z*L )/ 2 * cos(theta)
+r.x = r.x + pC * cos(r.th);
+% y = y + (a*R+z*L )/ 2 * sin(theta)
+r.y = r.y + pC * sin(r.th);
+
+r.P = P;
+r.Q = Q;
+end
+%     digits(last_digits);
+% r.utc(i+1)
+
+% if(r.utc(i+1) >= rob0.utc_startup)
+    
+     if plot_text && i <50
+        text(r.x, r.y, num2str( r.utc(i+1) ) );
+     end
+    if r.robot_visible
+        plot_robot(r);
+    end
+    if r.variance_visible
+        PP = r.P(1:2,1:2); 
+        error_ellipse(PP, [r.x, r.y],0.9973,'style', 'k');    
+    end
+    xyth(j,plotted_steps,1:4) = [double(r.x) double(r.y) double(r.th) double(r.utc(i+1))];
+    plotted_steps = plotted_steps +1;
+% end
+ 
+ 
+% utc2 = floor(r.utc(i+1));
+% % utc2 = floor(r.utc(i+1) + r.utc_offset);
+%  if mod( utc2, r.plotAsec) && (this_sec_plotted ~= utc2)
+%      if plot_text
+%         text(r.x, r.y, num2str(utc2) );
+%      end
+%     if r.robot_visible
+%         plot_robot(r);
+%     end
+%     if r.variance_visible
+%         PP = r.P(1:2,1:2);
+% %         plot2dgauss([r.x, r.y], PP, 'k');  
+%         error_ellipse(PP, [r.x, r.y],0.9973,'style', 'k');    
+%     end
+%     this_sec_plotted = utc2;
+%     xyth(j,plotted_steps,1:4) = [double(r.x) double(r.y) double(r.th) double(utc2)];
+%         plotted_steps = plotted_steps +1;
+%  end
+     
+% if mod(i,r.plot_period) == 0
+%     if r.robot_visible
+%         plot_robot(r);
+%     end
+% % APAs = A*P*A'
+% % BiBs = B*inVar*B'
+%     if r.variance_visible
+%         PP = r.P(1:2,1:2);
+% %         plot2dgauss([r.x, r.y], PP, 'k');
+% %         error_ellipse(PP, [r.x, r.y], 0.95,1, 'k');
+% %         error_ellipse(PP, [r.x, r.y], 0.95, 1);          
+% %         error_ellipse(PP, [r.x, r.y],0.9973,'style','k');    
+%         error_ellipse(PP, [r.x, r.y],0.9973,'style', 'k');    
+% %         if mod(i,r.plot_period*5) == 0
+% %             text(r.x, r.y, ['(P) = ', num2str(trace(P),'%4.3e') ]  );
+% %         %     text(r.x, r.y, ['trace(P) = '+trace(P)] );
+% %         end
+%     end
+% end
+XX(j,i+1,1:3,1:3) = r.P(1:3,1:3);
+%       draw robot trajectory - rainbow
+%     plot([r.x r.xNew+0.00001], [r.y r.yNew+0.00001], 'color', chsv(i+1,:), 'LineWidth', 1);
+    plot([r.lastx r.x+0.00001], [r.lasty r.y+0.00001], 'color',    chsv(i+1,:), 'LineWidth', 1);
+
+% floor(trace(P*1));
+%         plot([r.lastx r.x+0.0001], [r.lasty r.y+0.0001], 'color', ...
+%         chsv2( 3 ,:), 'LineWidth', ...
+%         floor(trace(P*1))+1 ...
+%         );
+
+    rob(j) = r;
+end % time loop
+end % robots
+hold on
+
+GPS = show_gps_track(cislo_mereni,rob0.plotAsec, rob0.utc_startup, rob0.utc_offset, rob0.utc_yawtime,plot_text, rob0.utc_end);
+
+axis equal;
+axis tight;
+grid on;
+xlabel ('x position [m]');
+ylabel ('y position [m]');
+% colorbar;
+
+digits = last_digits;
+
+
+%%
+% xyth(1,:,4)
+% xyth2(1,:,4)
+% clc
+% size(GPS)
+% size(xyth)
+
+figure(10)
+ hold on
+ plot(xyth(1,:,4))
+ plot(GPS(1,:,4))
+ 
+ 
+%  xyth(1,:,4) - 143000
+%  GPS(1,:,4) - 143000
+robot_i = 1
+for robot_i=1:i_rob
+% xyth(robot_i,1,4)
+% disp(GPS(1,1,4)-143000)
+    pocet = size(GPS,2)
+    zadny_offset = xyth(robot_i,1,4) - GPS(1,1,4);
+    stejne_stepu = size(xyth,2) - pocet;
+    
+    zadny_offset
+    stejne_stepu
+    a = pocet - 1 - abs(stejne_stepu)
+    %  xyth(1,:,1)
+    % double(xyth2(1,:,1))
+    double(xyth(robot_i,:,2));
+    double(GPS(1,:,2));
+    abschx(robot_i,1:a) = double( xyth(robot_i,1:a,1)) - double(GPS(1,1:a,1));
+    abschy(robot_i,1:a) = double(xyth(robot_i,1:a,2)) - double(GPS(1,1:a,2) );
+     abschxy(robot_i,1:a) = sqrt( abschx(robot_i,1:a).^2 + abschy(robot_i,1:a).^2 ) ;
+     
+    abschth(robot_i,1:a) = double(xyth(robot_i,1:a,3)) - double(GPS(1,1:a,3)) ;
+    abschtime(robot_i,1:a) = double(GPS(1,1:a,4)) - double(xyth(robot_i,1:a,4)) - 2*rob0.utc_offset ;
+%     abschtime(robot_i,1:a) = double(xyth(robot_i,1:a,4)) - double(GPS(1,1:a,4));
+%     disp(abschtime)
+    % % 
+    SUM_ABS(robot_i) = sum(abschxy(robot_i,1:a));
+    curfig = set_fig(main);
+    hold on
+    for p=1:a-1
+        plot( [xyth(robot_i,p,1),double(GPS(1,p,1))], [xyth(robot_i,p,2),double(GPS(1,p,2))], 'Color', rob(robot_i).color1 );
+    end
+    
+    % chyby plot
+%     set(gcf,'DefaultAxesColorOrder',[1 0 0;0 1 0;0 0 1])
+%     set(0,'DefaultAxesColorOrder', [1 0 0; 0.5 1 0.5; 0 0 1])
+% chyba polohy
+    figure(robot_i+3)
+    subplot(2,1,1);
+    plot(abschx(robot_i,:),'Color',[0 0.7 0])
+    hold on
+    plot(abschy(robot_i,:),'r')
+    hold on
+    plot(abschxy(robot_i,:),'b')
+    
+    Q = SUM_ABS(robot_i) / SUM_ABS(1);
+    EXY = SUM_ABS(robot_i) / pocet * 2;
+    
+    casova_osa = xyth(robot_i,1:2:end,4) - rob0.utc_startup;
+    title( strcat( ...
+        '#', num2str(robot_i) , rob(robot_i).title , ... 
+        ' - absolute position errors [m] - Q=', num2str(Q), ...
+        '; EXY=', num2str(EXY), ' m'...
+        ));
+    legend('e_x[m]','e_y[m]','e_{xy}[m]','Location','NorthWest', 'Orientation','Horizontal')
+    set(gca,'XTick',1:2:pocet)
+    set(gca,'XTickLabel',casova_osa)
+%     rotateXLabels(gca(),45)
+    grid on;
+    xlabel ('time [sec]');
+    ylabel ('absolute position error[m]');
+    
+% chyba úhlu
+    subplot(2,1,2);
+    plot(abschth(robot_i,:),'b')
+
+    title(strcat('#', num2str(robot_i) , rob(robot_i).title,' - absolute angular errors [°]'));
+    legend('e_{\theta}[°]','Location','NorthWest')
+
+    set(gca,'XTick',1:2:pocet)
+    set(gca,'XTickLabel',casova_osa)
+%     rotateXLabels(gca(),45)
+    grid on;
+    xlabel ('time [sec]');
+    ylabel ('absolute angular error[°]');
+
+
+%     robot_i = robot_i +1
+end
+
+figure(11)
+% chyba èasu
+%     subplot(3,1,3);
+    plot(abschtime(robot_i,:),'b')
+
+    title(strcat('GPS time error [sec]'));
+    legend('e_{time}[sec]','Location','NorthWest')
+    set(gca,'XTick',1:2:pocet)
+    set(gca,'XTickLabel',casova_osa)
+%     rotateXLabels(gca(),45)
+    grid on;
+    xlabel ('time [sec]');
+    ylabel ('GPS time error[sec]');
+
+% % as simulation
+% get_pxx(XX,1,10)
+% get_pxx_dif(XX,1,2,100)
+
+
+% PP(:,2,1,1) - PP(:,3,1,1) ;;
+% summ = 0;
+% for x=1:12
+% summ = summ + PP(x,2,1:3,1:3) - PP(x,2,1,1:3,1:3)';
+% end
+% summ
+% figure
+% P =  1.0e-003 *[...
+%     0.9704,    0.5184,   -0.2189 ;...
+%     0.5184,    0.3419,   -0.1232;...
+%    -0.2189,   -0.1232,    0.0500];
+% image(P,'CDataMapping','scaled')
+% axis image
+%%
+% figure(2);
+% base = rob(1).base;
+% maxxygraph = 42;
+% mex GET_dpath_dth.c;
+% mex UPDATE_xyth.c;
+% mcc -rimv step_sim.path 
+
+
+% % % % % % old = pL & pR in place of tR and tL
+% % % % % 
+% % % % % % SPOÈÍTAT ZNOVU
+% % % % % % d/dL ( 2*(R+L)/(R-L)*b/2*( sin((R-L)/2/b) * cos(th+(R-L)/2/b) ) ) 
+% % % % % % B(1,1) = ((L-R)*(L+R)*cos((-b*theta+L-R)/b)-2*b*R*(sin((-b*theta+L-R)/b)+sin(theta)))/(2*(L-R)^2);
+% % % % % % alternate form ==
+% % % % % B(1,1) = ((L-R)*(L+R)*cos(L/b-R/b-theta)-4*b*R*sin(L/(2*b)-R/(2*b))*cos((L-R)/(2*b)-theta))/(2*(L-R)^2);
+% % % % % 
+% % % % % % d/dR ( 2*(R+L)/(R-L)*b/2*( sin((R-L)/2/b) * cos(th+(R-L)/2/b) ) ) 
+% % % % % B(1,2) = ((R^2-L^2) * cos((-b *theta+L-R)/b)+2 *b* L* (sin((-b* theta+L-R)/b)+sin(theta)))/(2* (L-R)^2);
+% % % % % % alternate form ==
+% % % % % % B(1,2) = -((L-R)*(L+R)*cos(L/b-R/b-theta)-4*b*L*sin(L/(2*b)-R/(2*b))*cos((L-R)/(2*b)-theta))/(2*(L-R)^2);
+% % % % % 
+% % % % % % d/dL ( 2*(R+L)/(R-L)*b/2*( sin((R-L)/2/b) * sin(th+(R-L)/2/b) ) ) 
+% % % % % B(2,1) = ((R^2-L^2)*sin((-b*theta+L-R)/b)+2*b*R*(cos(theta)-cos((-b*theta+L-R)/b)))/(2*(L-R)^2);
+% % % % % % alternate form ==
+% % % % % % B(2,1) = ((R^2-L^2)*sin(L/b-R/b-theta)-2*b*R*cos(L/b-R/b-theta)+2*b*R*cos(theta))/(2*(L-R)^2);
+% % % % % 
+% % % % % % d/dR ( 2*(R+L)/(R-L)*b/2*( sin((R-L)/2/b) * sin(th+(R-L)/2/b) ) ) 
+% % % % % B(2,2) = ((L-R)*(L+R)*sin((-b*theta+L-R)/b)+2*b*L*(cos((-b*theta+L-R)/b)-cos(theta)))/(2*(L-R)^2);
+% % % % % % alternate form ==
+% % % % % % B(2,2) = ((L^2-R^2)*sin((-b*theta+L-R)/b)-2*b*L*cos(theta)+2*b*L*cos((-b*theta+L-R)/b))/(2*(L-R)^2);
+% % % % % 
+% % % % % B(3,1) = -1/b;      
+% % % % % B(3,2) = 1/b; 
+
+
+
+
+
+%% local and meas..
+%% matice B 
+% ->nope
+% cTh = 0.5*cos(arg); pCs = pC/2/b*sin(arg);
+% sTh = 0.5*sin(arg); pCc = pC/2/b*cos(arg);
+%     d=right, e=left 
+% B = [d../dR d../dL ; ...]
+
+
+% k1 = aC*(R+L)/(R-L)/b;
+% k2 = theta + aC*(R-L)/b;
+% k3 = b*L/ ( 2*( aC*(R-L)/b)^2 ); % 1e+7 -> nìjaká blbost
+% 
+% B(1,1) = k1*cos(k2)-k3*(sin(k2)-sin(theta));
+% B(1,2) = -k1*cos(k2)+k3*(sin(k2)-sin(theta));
+% 
+% B(2,1) = k1*sin(k2)-k3*(-cos(k2)+cos(theta));
+% B(2,2) = -k1*sin(k2)+k3*(-cos(k2)+cos(theta));
+% 
+% B(3,1) = r.aR/b;      
+% B(3,2) = -r.aL/b; 
+
+
+

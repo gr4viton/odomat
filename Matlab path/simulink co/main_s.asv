@@ -1,0 +1,121 @@
+% semestralni prace
+clear;close all;clc;
+%%
+addpath(genpath('D:\EDUC\b5\z_bzvs\'));
+addpath(genpath('E:\b5\z_bzvs\'));
+addpath(genpath('F:\b5\z_bzvs\'));
+
+% simechanic
+
+% plot([xod,xdo],[omega,omega],'color',cc(i,:),'LineWidth', 2);
+% plot([0 1 5], [0 0 4])
+
+scrsz = get(0,'ScreenSize');
+% % [left, bottom, width, height]
+main = figure('Name','main',...
+    'Position',[1 scrsz(4)/3 scrsz(3)/2 scrsz(4)/1.5]);
+curfig = set_fig(main);
+
+hold on;
+% r = 2;
+% posx = 0;
+% posy = 0;
+% d = 10;
+% for i = 0:10
+%    plot_square(posx + d*rand(), posy + d*rand(), r);
+% end
+
+dif = zeros(3,1);
+
+
+t_step = 0.1;
+t_end = 10;
+
+steps = t_end/t_step;
+t_fpt = steps / 15;
+
+rob0 = struct(...
+    'vellr', [8 9],...
+    'pathlr', [1 1],...
+    'wheel_radius', [1],...
+    'pos', [0 0],...
+    'th', 0,...
+    'base', 2,...
+    'color1', [0.7 0.9 0],...
+    'color2', [0 0 0],...
+    'robot_radius', 2);
+% v = s*t
+% vel = path * t_sim
+% path = vel / t_sim
+rob0.pathlr = rob0.vellr .* t_step;
+
+rob(2) = rob0;
+rob(1) = rob0;
+rob(1).pos(2) = rob(1).pos(2) + 50;
+rob(3) = rob0;
+rob(3).pos(2) = rob(2).pos(2) + 100;
+
+% rob = set_vellr(rob,[100,10]);
+%     'vell', 10,...
+%     'y', 0,...
+
+% robot.th0 
+% plot_step_sim(vell,velr, b, th0, x0, y0, t_step);
+
+chsv = hsv( floor(steps)+2);
+
+plot_robot(rob(1));
+plot_robot(rob(2));
+plot_robot(rob(3));
+% plot_robot(robo(1));
+% maxpos = rob.radius;
+% 
+% rob0.th =-pi/2;
+% plot_robot(rob0);
+for i = 0: steps
+    last_pos(1,:) = rob(1).pos;
+    last_pos(2,:) = rob(2).pos;
+    last_pos(3,:) = rob(3).pos;
+    
+    a = 1;
+    [dif(1), dif(2), dif(3)] = step_sim_path( rob(a).vellr(1), rob(a).vellr(2), rob(a).base, rob(a).th, t_step);
+    [rob(a).pos, rob(a).th] = update_robot( rob(a), dif(1), dif(2), dif(3) );
+
+    a=2;
+    [dif(1), dif(2), dif(3)] = step_sim_vel( rob(a).vellr(1), rob(a).vellr(2), rob(a).base, rob(a).th, t_step);
+    [rob(a).pos, rob(a).th] = update_robot( rob(a), dif(1), dif(2), dif(3) );
+    
+    a=3;
+    [dif(1), dif(2), dif(3)] = step_sim_path( rob(a).vellr(1), rob(a).vellr(2), rob(a).base, rob(a).th, t_step);
+    [rob(a).pos, rob(a).th] = update_robot( rob(a), dif(1), dif(2), dif(3) );
+%     [rob.pos(1), rob.pos(2), rob.th] = step_sim(rob, t_step);
+    if mod(i,t_fpt) == 0
+        plot_robot(rob(1));
+        plot_robot(rob(2));
+        plot_robot(rob(3));
+    end
+%     i
+        plot([last_pos(1,1) rob(1).pos(1)+0.0001], [last_pos(1,2) rob(1).pos(2)+0.0001], 'color', chsv(steps - (i-1),:), 'LineWidth', 2);
+        plot([last_pos(2,1) rob(2).pos(1)+0.0001], [last_pos(2,2) rob(2).pos(2)+0.0001], 'color', chsv(i+1,:), 'LineWidth', 2);
+        plot([last_pos(3,1) rob(3).pos(1)+0.0001], [last_pos(3,2) rob(3).pos(2)+0.0001], 'color', chsv(i+1,:), 'LineWidth', 2);
+
+%       if maxpos < max(rob.pos)
+%           maxpos = max(rob.pos);
+%       end
+end
+
+% axis([ -maxpos maxpos -maxpos maxpos]);
+% axis square;
+% axis tight;
+% axis fill;
+axis equal;
+grid on;
+
+%%
+% figure(2);
+base = rob(1).base;
+maxxygraph = 42;
+mex GET_dpath_dth.c;
+mex UPDATE_xyth.c;
+% mcc -rimv step_sim.path 
+

@@ -1,0 +1,24 @@
+function [] = plot_robot(rob)
+% draws the "robot"
+vell = rob.vellr(1);
+velr = rob.vellr(2);
+b = rob.base;
+r = rob.radius;
+th = rob.th;
+x0 = rob.pos(1);
+y0 = rob.pos(2);
+
+scale = 1.5;
+
+% draws a circle
+plot_square(x0, y0, r, rob.color1);
+
+%  ___
+% /  _\___
+% \___/
+plot([x0 x0+r*scale*cos(th)],[y0 y0+r*scale*sin(th)], 'color', [0 0 0])
+a = th + pi/4;
+plot([x0 x0+r*scale*cos(a)],[y0 y0+r*scale*sin(a)], 'color', [0 0 0])
+
+a = th  pi/4;
+plot([x0 x0+r*scale*cos(a)],[y0 y0+r*scale*sin(a)], 'color', [0 0 0])
